@@ -34,6 +34,7 @@ import {
   LassoIcon,
   mermaidLogoIcon,
   MagicIcon,
+  MagicPencilIcon,
 } from "./icons";
 
 import "./ToolIcon.scss";
@@ -244,6 +245,21 @@ export const MobileToolBar = ({
         aria-label={capitalizeString(t("toolBar.freedraw"))}
         data-testid="toolbar-freedraw"
         onChange={() => handleToolChange("freedraw")}
+      />
+
+      {/* Magic Pencil */}
+      <ToolButton
+        className={clsx({
+          active: activeTool.type === "magicpencil",
+        })}
+        type="radio"
+        icon={MagicPencilIcon}
+        checked={activeTool.type === "magicpencil"}
+        name="editor-current-shape"
+        title="Magic Pencil" // TODO: i18n
+        aria-label="Magic Pencil"
+        data-testid="toolbar-magicpencil"
+        onChange={() => handleToolChange("magicpencil")}
       />
 
       {/* Eraser */}
