@@ -44,7 +44,7 @@ const perpendicularDistance = (
  * @returns A simplified array of points.
  */
 export const ramerDouglasPeucker = (
-  points: (GlobalPoint | LocalPoint | [number, number])[],
+  points: readonly (GlobalPoint | LocalPoint | [number, number])[],
   epsilon: number,
 ): (GlobalPoint | LocalPoint | [number, number])[] => {
   if (points.length < 3) {
@@ -112,7 +112,7 @@ type RecognizedShape =
     }
   | null;
 
-const getBoundingBox = (points: [number, number][]) => {
+const getBoundingBox = (points: readonly (GlobalPoint | LocalPoint | [number, number])[]) => {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -128,7 +128,7 @@ const getBoundingBox = (points: [number, number][]) => {
   return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 };
 
-const isClosed = (points: [number, number][]) => {
+const isClosed = (points: readonly (GlobalPoint | LocalPoint | [number, number])[]) => {
   const start = points[0];
   const end = points[points.length - 1];
   const dist = Math.hypot(start[0] - end[0], start[1] - end[1]);

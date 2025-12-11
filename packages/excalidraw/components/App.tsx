@@ -7315,10 +7315,11 @@ class App extends React.Component<AppProps, AppState> {
     } else if (
       this.state.activeTool.type !== "eraser" &&
       this.state.activeTool.type !== "hand" &&
-      this.state.activeTool.type !== "image"
+      this.state.activeTool.type !== "image" &&
+      this.state.activeTool.type !== "magicpencil"
     ) {
       this.createGenericElementOnPointerDown(
-        elementType,
+        this.state.activeTool.type,
         pointerDownState,
       );
     }
