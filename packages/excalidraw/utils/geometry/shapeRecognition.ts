@@ -2,7 +2,6 @@ import {
   type GlobalPoint,
   type LocalPoint,
   pointDistance,
-  pointDistance2,
 } from "@excalidraw/math";
 import type {
   ExcalidrawElement,
@@ -141,7 +140,7 @@ const isClosed = (points: [number, number][]) => {
 
 // Simplified detection logic
 export const recognizeShape = (
-  points: [number, number][],
+  points: readonly (GlobalPoint | LocalPoint | [number, number])[],
 ): RecognizedShape => {
   if (points.length < 2) {
     return null;

@@ -70,7 +70,7 @@ export const SHAPES = [
     icon: MagicPencilIcon,
     value: "magicpencil",
     key: KEYS.P, // TODO: proper key
-    numericKey: null,
+    numericKey: undefined,
     fillable: false,
   },
   {

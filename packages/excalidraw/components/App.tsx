@@ -7318,7 +7318,7 @@ class App extends React.Component<AppProps, AppState> {
       this.state.activeTool.type !== "image"
     ) {
       this.createGenericElementOnPointerDown(
-        this.state.activeTool.type,
+        elementType,
         pointerDownState,
       );
     }
@@ -10010,7 +10010,7 @@ class App extends React.Component<AppProps, AppState> {
                   y: newElement.y + recognizedShape.y,
                   width: recognizedShape.width,
                   height: recognizedShape.height,
-                  angle: recognizedShape.angle,
+                  angle: recognizedShape.angle as Radians,
                 });
                 break;
               case "ellipse":
@@ -10020,7 +10020,7 @@ class App extends React.Component<AppProps, AppState> {
                   y: newElement.y + recognizedShape.y,
                   width: recognizedShape.width,
                   height: recognizedShape.height,
-                  angle: recognizedShape.angle,
+                  angle: recognizedShape.angle as Radians,
                 });
                 break;
               case "diamond":
@@ -10030,7 +10030,7 @@ class App extends React.Component<AppProps, AppState> {
                   y: newElement.y + recognizedShape.y,
                   width: recognizedShape.width,
                   height: recognizedShape.height,
-                  angle: recognizedShape.angle,
+                  angle: recognizedShape.angle as Radians,
                 });
                 break;
               case "arrow":
