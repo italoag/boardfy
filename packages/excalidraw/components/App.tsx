@@ -7291,7 +7291,7 @@ class App extends React.Component<AppProps, AppState> {
         this.state.activeTool.type,
         pointerDownState,
       );
-    } else if (this.state.activeTool.type === "freedraw") {
+    } else if (this.state.activeTool.type === "freedraw" || this.state.activeTool.type === "magicpencil") {
       this.handleFreeDrawElementOnPointerDown(
         event,
         this.state.activeTool.type,
