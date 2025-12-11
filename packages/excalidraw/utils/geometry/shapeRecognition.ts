@@ -143,9 +143,6 @@ const isClosed = (points: readonly (GlobalPoint | LocalPoint | [number, number])
   const start = points[0];
   const end = points[points.length - 1];
   const dist = Math.hypot(start[0] - end[0], start[1] - end[1]);
-  // Relative to perimeter or bounding box could be better, but fixed threshold is a start
-  // Considering it's a hand drawn shape, closure might be loose.
-  // Using 10% of total length or fixed px?
   return dist < 30; // 30px gap allowed
 };
 
@@ -166,7 +163,6 @@ export const recognizeShape = (
 
   if (!closed) {
     // Check if it's a line or arrow
-    // A line is basically 2 points in simplified, or nearly collinear points
     if (simplified.length === 2) {
       // It's a line
       return {
@@ -178,14 +174,7 @@ export const recognizeShape = (
     }
 
     // Arrow recognition heuristic
-    // If > 2 points, check if it resembles an arrow.
-    // Simple check: if simplified points roughly form a line segment plus a hook/arrowhead at end?
-    // Or just treat any open shape with 3-5 points as potential arrow?
-    // For "Magic Pencil", converting fuzzy lines to Straight Arrow is a good default.
     if (simplified.length >= 3 && simplified.length <= 5) {
-      // Return as arrow. We normalize it to a straight arrow for "geometric" look.
-      // Or keep it polyline if it's very zig-zag?
-      // Let's assume if it's open and simple enough, user meant arrow.
       const start = simplified[0];
       const end = simplified[simplified.length - 1];
       return {
@@ -205,14 +194,41 @@ export const recognizeShape = (
     };
   } else {
     // Closed shape
-    // RDP on closed shape might reduce it to a few vertices.
     const closedSimplified = ramerDouglasPeucker([...points, points[0]], epsilon) as [number, number][];
 
-    const vertexCount = closedSimplified.length - 1; // start repeats at end for closedSimplified usually if we force it
+    // vertexCount is simplified points count minus 1 (since start repeats at end)
+    const vertexCount = closedSimplified.length - 1;
+
+    const bbox = getBoundingBox(points);
+    const bboxArea = bbox.width * bbox.height;
+
+    // Helper to determine Rect vs Diamond
+    const checkRectVsDiamond = () => {
+       const polyArea = getPolygonArea(closedSimplified);
+       const ratio = polyArea / bboxArea;
+
+       if (ratio < 0.65) {
+         return {
+           type: "diamond",
+           x: bbox.minX,
+           y: bbox.minY,
+           width: bbox.width,
+           height: bbox.height,
+           angle: 0,
+         } as const;
+       }
+       return {
+         type: "rectangle",
+         x: bbox.minX,
+         y: bbox.minY,
+         width: bbox.width,
+         height: bbox.height,
+         angle: 0,
+       } as const;
+    };
 
     if (vertexCount === 3) {
-       // Triangle
-       // Return as closed line (polygon)
+       // Triangle -> Line (Polygon)
        return {
           type: "line",
           points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
@@ -221,39 +237,11 @@ export const recognizeShape = (
        };
     }
 
-    if (vertexCount === 4) {
-       // Could be Rect or Diamond.
-       const bbox = getBoundingBox(points);
-       const polyArea = getPolygonArea(closedSimplified);
-       const bboxArea = bbox.width * bbox.height;
-
-       // Diamond area is 0.5 * bboxArea (if aligned perfectly)
-       // Rect area is 1.0 * bboxArea (if aligned perfectly)
-       // If polyArea / bboxArea is significantly < 0.8, it's likely a diamond (or rotated rect)
-
-       const ratio = polyArea / bboxArea;
-
-       if (ratio < 0.75) {
-         return {
-           type: "diamond",
-           x: bbox.minX,
-           y: bbox.minY,
-           width: bbox.width,
-           height: bbox.height,
-           angle: 0,
-         };
-       }
-
-       return {
-         type: "rectangle",
-         x: bbox.minX,
-         y: bbox.minY,
-         width: bbox.width,
-         height: bbox.height,
-         angle: 0,
-       };
+    if (vertexCount === 4 || vertexCount === 5) {
+        return checkRectVsDiamond();
     }
 
+    // For more vertices, check Ellipse
     const center = {
       x: (Math.min(...points.map(p => p[0])) + Math.max(...points.map(p => p[0]))) / 2,
       y: (Math.min(...points.map(p => p[1])) + Math.max(...points.map(p => p[1]))) / 2
@@ -264,8 +252,8 @@ export const recognizeShape = (
     const variance = distances.reduce((a, b) => a + Math.pow(b - meanDist, 2), 0) / distances.length;
     const stdDev = Math.sqrt(variance);
 
-    if (stdDev / meanDist < 0.15) { // Threshold for "roundness"
-       const bbox = getBoundingBox(points);
+    // Stricter threshold for roundness to avoid capturing Squares/Diamonds
+    if (stdDev / meanDist < 0.1) {
        return {
          type: "ellipse",
          x: bbox.minX,
@@ -276,16 +264,10 @@ export const recognizeShape = (
        };
     }
 
-    // Fallback to Rectangle for closed shapes
-    const bbox = getBoundingBox(points);
-    return {
-       type: "rectangle",
-       x: bbox.minX,
-       y: bbox.minY,
-       width: bbox.width,
-       height: bbox.height,
-       angle: 0,
-    };
+    // Fallback: It's a polygon but with too many points for exact 4-corner match
+    // Check if it resembles a Diamond or Rectangle based on area
+    // Use the simplified points for area calculation to smooth out jitter
+    return checkRectVsDiamond();
   }
 
   return null;
