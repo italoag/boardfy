@@ -7315,8 +7315,7 @@ class App extends React.Component<AppProps, AppState> {
     } else if (
       this.state.activeTool.type !== "eraser" &&
       this.state.activeTool.type !== "hand" &&
-      this.state.activeTool.type !== "image" &&
-      this.state.activeTool.type !== "magicpencil"
+      this.state.activeTool.type !== "image"
     ) {
       this.createGenericElementOnPointerDown(
         this.state.activeTool.type,
@@ -10035,7 +10034,14 @@ class App extends React.Component<AppProps, AppState> {
                 });
                 break;
               case "arrow":
-                // TODO: support arrow recognition
+                shape = newArrowElement({
+                  ...commonProps,
+                  type: "arrow",
+                  x: newElement.x + recognizedShape.x,
+                  y: newElement.y + recognizedShape.y,
+                  points: recognizedShape.points.map(p => pointFrom<LocalPoint>(p[0], p[1])),
+                  endArrowhead: "arrow",
+                });
                 break;
               case "line":
                 shape = newLinearElement({
