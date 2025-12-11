@@ -11,6 +11,7 @@ import {
   TextIcon,
   ImageIcon,
   EraserIcon,
+  MagicPencilIcon,
 } from "./icons";
 
 import type { AppClassProperties } from "../types";
@@ -63,6 +64,13 @@ export const SHAPES = [
     value: "freedraw",
     key: [KEYS.P, KEYS.X],
     numericKey: KEYS["7"],
+    fillable: false,
+  },
+  {
+    icon: MagicPencilIcon,
+    value: "magicpencil",
+    key: KEYS.P, // TODO: proper key
+    numericKey: null,
     fillable: false,
   },
   {
