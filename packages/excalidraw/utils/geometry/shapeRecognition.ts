@@ -48,7 +48,7 @@ export const ramerDouglasPeucker = (
   epsilon: number,
 ): (GlobalPoint | LocalPoint | [number, number])[] => {
   if (points.length < 3) {
-    return points;
+    return [...points];
   }
 
   let dmax = 0;
