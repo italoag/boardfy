@@ -1,12 +1,7 @@
 import {
   type GlobalPoint,
   type LocalPoint,
-  pointDistance,
 } from "@excalidraw/math";
-import type {
-  ExcalidrawElement,
-  ExcalidrawLinearElement,
-} from "@excalidraw/element/types";
 
 /**
  * Calculates the perpendicular distance of a point from a line segment.
@@ -153,10 +148,6 @@ const filterCollinearPoints = (points: (GlobalPoint | LocalPoint | [number, numb
   const result = [points[0]];
   const n = points.length;
 
-  // We assume closed loop here for angle calc?
-  // RDP usually returns start and end as separate points even if same coord.
-  // Let's treat it as open list first.
-
   for (let i = 1; i < n - 1; i++) {
     const prev = points[i - 1];
     const curr = points[i];
@@ -169,21 +160,11 @@ const filterCollinearPoints = (points: (GlobalPoint | LocalPoint | [number, numb
     const mag2 = Math.hypot(v2[0], v2[1]);
 
     if (mag1 === 0 || mag2 === 0) {
-      continue; // Skip duplicate point
+      continue;
     }
 
     const dot = v1[0] * v2[0] + v1[1] * v2[1];
     const angle = Math.acos(Math.min(Math.max(dot / (mag1 * mag2), -1), 1));
-
-    // Angle in radians. 0 means straight back?
-    // dot product of normalized vectors:
-    // 1.0 -> same direction (0 degrees, straight line continuation)
-    // 0.0 -> 90 degrees
-    // -1.0 -> 180 degrees turn
-
-    // We want to remove points where line continues straight.
-    // So if dot / mag is close to 1.
-    // Angle 0 is straight line.
 
     if (angle > 0.35) { // Keep if turn is significant (> ~20 degrees)
       result.push(curr);
@@ -192,17 +173,49 @@ const filterCollinearPoints = (points: (GlobalPoint | LocalPoint | [number, numb
 
   result.push(points[n - 1]);
 
-  // Also check if start/end matches and remove duplicates for polygon count
-  if (result.length > 2) {
-      const start = result[0];
-      const end = result[result.length - 1];
-      if (Math.hypot(start[0]-end[0], start[1]-end[1]) < 5) {
-          // If effectively closed, check angle at closure?
-          // For now, let's just leave it as is, recognizeShape handles closedSimplified count logic
-      }
-  }
-
   return result;
+}
+
+// Check if a quadrilateral is a rectangle (approximately 90 degree angles)
+const isLikelyRectangle = (points: (GlobalPoint | LocalPoint | [number, number])[]) => {
+  if (points.length !== 5) return false; // 4 sides + closed
+
+  for (let i = 0; i < 4; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[(i + 2) % 4]; // logic for 4 unique points
+    // Actually points has 5 elements (0..4), 0==4.
+    // Neighbors of p2 are p1 and p3.
+    // Vectors: p2->p1, p2->p3
+
+    // Let's use indices 0,1,2,3.
+    // Angles at 0, 1, 2, 3.
+    // Angle at 1: p0-p1-p2
+
+    const prev = points[i];
+    const curr = points[(i + 1) % 4];
+    const next = points[(i + 2) % 4];
+
+    const v1 = [prev[0] - curr[0], prev[1] - curr[1]];
+    const v2 = [next[0] - curr[0], next[1] - curr[1]];
+
+    const mag1 = Math.hypot(v1[0], v1[1]);
+    const mag2 = Math.hypot(v2[0], v2[1]);
+
+    if (mag1 === 0 || mag2 === 0) continue;
+
+    const dot = v1[0] * v2[0] + v1[1] * v2[1];
+    // cos(theta) = dot / (mag1*mag2)
+    // For 90 degrees, dot should be 0. cos(90) = 0.
+
+    const cosTheta = Math.abs(dot / (mag1 * mag2));
+
+    if (cosTheta > 0.3) { // Allow some deviation. 0.3 is approx 72-108 degrees range?
+      // cos(72) = 0.309. cos(90)=0.
+      return false;
+    }
+  }
+  return true;
 }
 
 // Simplified detection logic
@@ -214,16 +227,14 @@ export const recognizeShape = (
   }
 
   // 1. Simplify
-  const epsilon = 10; // Adjust sensitivity for better shape detection
+  const epsilon = 10;
   const simplified = ramerDouglasPeucker(points, epsilon) as [number, number][];
 
   // 2. Check for Line/Arrow (open shapes) vs Closed shapes
   const closed = isClosed(points);
 
   if (!closed) {
-    // Check if it's a line or arrow
     if (simplified.length === 2) {
-      // It's a line
       return {
         type: "line",
         points: simplified.map((p) => [p[0] - simplified[0][0], p[1] - simplified[0][1]]) as [number, number][],
@@ -232,7 +243,7 @@ export const recognizeShape = (
       };
     }
 
-    // Arrow recognition heuristic
+    // Arrow recognition
     if (simplified.length >= 3 && simplified.length <= 5) {
       const start = simplified[0];
       const end = simplified[simplified.length - 1];
@@ -244,7 +255,6 @@ export const recognizeShape = (
       };
     }
 
-    // Default to polyline for other open shapes
     return {
        type: "line",
        points: simplified.map((p) => [p[0] - simplified[0][0], p[1] - simplified[0][1]]) as [number, number][],
@@ -254,43 +264,14 @@ export const recognizeShape = (
   } else {
     // Closed shape
     let closedSimplified = ramerDouglasPeucker([...points, points[0]], epsilon) as [number, number][];
-
-    // Further simplify by filtering collinear points to fix Triangle detection
     closedSimplified = filterCollinearPoints(closedSimplified) as [number, number][];
 
-    // vertexCount is simplified points count minus 1 (since start repeats at end)
-    const vertexCount = closedSimplified.length - 1;
-
+    const vertexCount = closedSimplified.length - 1; // start repeats at end
     const bbox = getBoundingBox(points);
     const bboxArea = bbox.width * bbox.height;
 
-    // Helper to determine Rect vs Diamond
-    const checkRectVsDiamond = () => {
-       const polyArea = getPolygonArea(closedSimplified);
-       const ratio = polyArea / bboxArea;
-
-       if (ratio < 0.65) {
-         return {
-           type: "diamond",
-           x: bbox.minX,
-           y: bbox.minY,
-           width: bbox.width,
-           height: bbox.height,
-           angle: 0,
-         } as const;
-       }
-       return {
-         type: "rectangle",
-         x: bbox.minX,
-         y: bbox.minY,
-         width: bbox.width,
-         height: bbox.height,
-         angle: 0,
-       } as const;
-    };
-
+    // 3 Vertices -> Triangle
     if (vertexCount === 3) {
-       // Triangle -> Line (Polygon)
        return {
           type: "line",
           points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
@@ -299,11 +280,67 @@ export const recognizeShape = (
        };
     }
 
-    if (vertexCount === 4 || vertexCount === 5) {
-        return checkRectVsDiamond();
+    // 4 Vertices -> Quad (Rect, Diamond, Trapezoid, Parallelogram)
+    if (vertexCount === 4) {
+       // Check if Rectangle
+       if (isLikelyRectangle(closedSimplified)) {
+          return {
+             type: "rectangle",
+             x: bbox.minX,
+             y: bbox.minY,
+             width: bbox.width,
+             height: bbox.height,
+             angle: 0,
+          };
+       }
+
+       // Check Area Ratio for Diamond
+       const polyArea = getPolygonArea(closedSimplified);
+       const ratio = polyArea / bboxArea;
+
+       if (ratio < 0.65) {
+         // Likely Diamond (Rhombus)
+         return {
+           type: "diamond",
+           x: bbox.minX,
+           y: bbox.minY,
+           width: bbox.width,
+           height: bbox.height,
+           angle: 0,
+         };
+       }
+
+       // Fallback for 4-sided: return as Polygon (Parallelogram, Trapezoid, or Irregular)
+       // This preserves the geometry of Trapezoid/Parallelogram better than forcing into Rect/Diamond
+       return {
+          type: "line",
+          points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
+          x: closedSimplified[0][0],
+          y: closedSimplified[0][1],
+       };
     }
 
-    // For more vertices, check Ellipse
+    // 5 Vertices -> Pentagon
+    if (vertexCount === 5) {
+       return {
+          type: "line",
+          points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
+          x: closedSimplified[0][0],
+          y: closedSimplified[0][1],
+       };
+    }
+
+    // 6 Vertices -> Hexagon
+    if (vertexCount === 6) {
+       return {
+          type: "line",
+          points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
+          x: closedSimplified[0][0],
+          y: closedSimplified[0][1],
+       };
+    }
+
+    // > 6 Vertices: Check Ellipse
     const center = {
       x: (Math.min(...points.map(p => p[0])) + Math.max(...points.map(p => p[0]))) / 2,
       y: (Math.min(...points.map(p => p[1])) + Math.max(...points.map(p => p[1]))) / 2
@@ -314,7 +351,6 @@ export const recognizeShape = (
     const variance = distances.reduce((a, b) => a + Math.pow(b - meanDist, 2), 0) / distances.length;
     const stdDev = Math.sqrt(variance);
 
-    // Stricter threshold for roundness to avoid capturing Squares/Diamonds
     if (stdDev / meanDist < 0.1) {
        return {
          type: "ellipse",
@@ -326,10 +362,13 @@ export const recognizeShape = (
        };
     }
 
-    // Fallback: It's a polygon but with too many points for exact 4-corner match
-    // Check if it resembles a Diamond or Rectangle based on area
-    // Use the simplified points for area calculation to smooth out jitter
-    return checkRectVsDiamond();
+    // Fallback -> Polygon
+    return {
+        type: "line",
+        points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
+        x: closedSimplified[0][0],
+        y: closedSimplified[0][1],
+    };
   }
 
   return null;
