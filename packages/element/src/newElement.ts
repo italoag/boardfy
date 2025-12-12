@@ -439,6 +439,21 @@ export const refreshTextDimensions = (
   return { text, ...dimensions };
 };
 
+export const newRectangleElement = (
+  opts: ElementConstructorOpts,
+): NonDeleted<ExcalidrawGenericElement> =>
+  _newElementBase<ExcalidrawGenericElement>("rectangle", opts);
+
+export const newDiamondElement = (
+  opts: ElementConstructorOpts,
+): NonDeleted<ExcalidrawGenericElement> =>
+  _newElementBase<ExcalidrawGenericElement>("diamond", opts);
+
+export const newEllipseElement = (
+  opts: ElementConstructorOpts,
+): NonDeleted<ExcalidrawGenericElement> =>
+  _newElementBase<ExcalidrawGenericElement>("ellipse", opts);
+
 export const newFreeDrawElement = (
   opts: {
     type: "freedraw";

@@ -133,6 +133,9 @@ import {
   newImageElement,
   newLinearElement,
   newTextElement,
+  newDiamondElement,
+  newEllipseElement,
+  newRectangleElement,
   refreshTextDimensions,
   deepCopyElement,
   duplicateElements,
@@ -279,6 +282,8 @@ import type {
 } from "@excalidraw/element/types";
 
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
+
+import { recognizeShape } from "../utils/geometry/shapeRecognition";
 
 import {
   actionAddToLibrary,
@@ -7286,7 +7291,7 @@ class App extends React.Component<AppProps, AppState> {
         this.state.activeTool.type,
         pointerDownState,
       );
-    } else if (this.state.activeTool.type === "freedraw") {
+    } else if (this.state.activeTool.type === "freedraw" || this.state.activeTool.type === "magicpencil") {
       this.handleFreeDrawElementOnPointerDown(
         event,
         this.state.activeTool.type,
@@ -8203,7 +8208,7 @@ class App extends React.Component<AppProps, AppState> {
 
   private handleFreeDrawElementOnPointerDown = (
     event: React.PointerEvent<HTMLElement>,
-    elementType: ExcalidrawFreeDrawElement["type"],
+    elementType: ExcalidrawFreeDrawElement["type"] | "magicpencil",
     pointerDownState: PointerDownState,
   ) => {
     // Begin a mark capture. This does not have to update state yet.
@@ -8220,8 +8225,9 @@ class App extends React.Component<AppProps, AppState> {
 
     const simulatePressure = event.pressure === 0.5;
 
+    // For magic pencil, we use freedraw type initially to capture the stroke
     const element = newFreeDrawElement({
-      type: elementType,
+      type: "freedraw",
       x: gridX,
       y: gridY,
       strokeColor: this.state.currentItemStrokeColor,
@@ -9976,6 +9982,95 @@ class App extends React.Component<AppProps, AppState> {
           pressures,
         });
 
+        if (activeTool.type === "magicpencil") {
+          const recognizedShape = recognizeShape(newElement.points);
+
+          if (recognizedShape) {
+            const { strokeColor, backgroundColor, strokeWidth, roughness, opacity, fillStyle, strokeStyle, roundness } = newElement;
+            const commonProps = {
+              strokeColor,
+              backgroundColor,
+              strokeWidth,
+              roughness,
+              opacity,
+              fillStyle,
+              strokeStyle,
+              roundness,
+              locked: false,
+              frameId: newElement.frameId,
+            };
+
+            let shape: ExcalidrawElement | null = null;
+
+            switch (recognizedShape.type) {
+              case "rectangle":
+                shape = newRectangleElement({
+                  ...commonProps,
+                  x: newElement.x + recognizedShape.x,
+                  y: newElement.y + recognizedShape.y,
+                  width: recognizedShape.width,
+                  height: recognizedShape.height,
+                  angle: recognizedShape.angle as Radians,
+                });
+                break;
+              case "ellipse":
+                shape = newEllipseElement({
+                  ...commonProps,
+                  x: newElement.x + recognizedShape.x,
+                  y: newElement.y + recognizedShape.y,
+                  width: recognizedShape.width,
+                  height: recognizedShape.height,
+                  angle: recognizedShape.angle as Radians,
+                });
+                break;
+              case "diamond":
+                shape = newDiamondElement({
+                  ...commonProps,
+                  x: newElement.x + recognizedShape.x,
+                  y: newElement.y + recognizedShape.y,
+                  width: recognizedShape.width,
+                  height: recognizedShape.height,
+                  angle: recognizedShape.angle as Radians,
+                });
+                break;
+              case "arrow":
+                shape = newArrowElement({
+                  ...commonProps,
+                  type: "arrow",
+                  x: newElement.x + recognizedShape.x,
+                  y: newElement.y + recognizedShape.y,
+                  points: recognizedShape.points.map(p => pointFrom<LocalPoint>(p[0], p[1])),
+                  endArrowhead: "arrow",
+                });
+                break;
+              case "line":
+                shape = newLinearElement({
+                  ...commonProps,
+                  type: "line",
+                  x: newElement.x + recognizedShape.x,
+                  y: newElement.y + recognizedShape.y,
+                  points: recognizedShape.points.map(p => pointFrom<LocalPoint>(p[0], p[1])),
+                });
+                break;
+            }
+
+            if (shape) {
+              this.scene.replaceAllElements([
+                ...this.scene.getElementsIncludingDeleted().filter((el) => el.id !== newElement.id),
+                shape
+              ]);
+
+              this.setState({
+                newElement: null,
+                selectedElementIds: { [shape.id]: true },
+              });
+
+              this.actionManager.executeAction(actionFinalize);
+              return;
+            }
+          }
+        }
+
         this.actionManager.executeAction(actionFinalize);
 
         return;
@@ -10606,7 +10701,7 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      if (!activeTool.locked && activeTool.type !== "freedraw" && newElement) {
+      if (!activeTool.locked && activeTool.type !== "freedraw" && activeTool.type !== "magicpencil" && newElement) {
         this.setState((prevState) => ({
           selectedElementIds: makeNextSelectedElementIds(
             {
@@ -10657,6 +10752,7 @@ class App extends React.Component<AppProps, AppState> {
       if (
         !activeTool.locked &&
         activeTool.type !== "freedraw" &&
+        activeTool.type !== "magicpencil" &&
         (activeTool.type !== "lasso" ||
           // if lasso is turned on but from selection => reset to selection
           (activeTool.type === "lasso" && activeTool.fromSelection))
