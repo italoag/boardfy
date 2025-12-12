@@ -6,7 +6,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://excalidraw.com"
+          "value": "https://boardfy.xyz"
         },
         {
           "key": "X-Content-Type-Options",
@@ -31,7 +31,7 @@
         },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://excalidraw.com"
+          "value": "https://boardfy.xyz"
         }
       ]
     },
@@ -52,17 +52,17 @@
   "redirects": [
     {
       "source": "/webex/:match*",
-      "destination": "https://for-webex.excalidraw.com"
+      "destination": "https://webex.boardfy.xyz"
     },
     {
       "source": "/:path*",
       "has": [
         {
           "type": "host",
-          "value": "vscode.excalidraw.com"
+          "value": "vscode.boardfy.xyz"
         }
       ],
-      "destination": "https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor"
+      "destination": "https://marketplace.visualstudio.com/items?itemName=EITA.boardfy-editor"
     }
   ],
   "outputDirectory": "excalidraw-app/build",

@@ -62,7 +62,7 @@ export const SHAPES = [
   {
     icon: FreedrawIcon,
     value: "freedraw",
-    key: [KEYS.P, KEYS.X],
+    key: KEYS.X,
     numericKey: KEYS["7"],
     fillable: false,
   },
