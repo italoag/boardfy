@@ -12,6 +12,7 @@ import {
   ImageIcon,
   EraserIcon,
   MagicPencilIcon,
+  HexagonIcon,
 } from "./icons";
 
 import type { AppClassProperties } from "../types";
@@ -36,6 +37,13 @@ export const SHAPES = [
     value: "diamond",
     key: KEYS.D,
     numericKey: KEYS["3"],
+    fillable: true,
+  },
+  {
+    icon: HexagonIcon,
+    value: "hexagon",
+    key: KEYS.J,
+    numericKey: undefined,
     fillable: true,
   },
   {

@@ -84,6 +84,15 @@ export const PlusPromoIcon = createIcon(
   tablerIconProps,
 );
 
+// tabler-icons: hexagon
+export const HexagonIcon = createIcon(
+  <g strokeWidth="1.5">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M19 6.873a2 2 0 0 1 1 1.747v6.536a2 2 0 0 1 -1 1.747l-5 2.873a2 2 0 0 1 -2 0l-5 -2.873a2 2 0 0 1 -1 -1.747v-6.536a2 2 0 0 1 1 -1.747l5 -2.873a2 2 0 0 1 2 0l5 2.873z" />
+  </g>,
+  tablerIconProps,
+);
+
 // tabler-icons: book
 export const LibraryIcon = createIcon(
   <g strokeWidth="1.25">

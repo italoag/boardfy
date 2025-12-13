@@ -5,6 +5,8 @@ import {
   DRAGGING_THRESHOLD,
 } from "@excalidraw/common";
 
+import { pointFrom, type LocalPoint } from "@excalidraw/math";
+
 import type {
   AppState,
   NormalizedZoomValue,
@@ -337,6 +339,21 @@ export const dragNewElement = ({
       };
     }
 
+    let points: LocalPoint[] | undefined;
+    if (elementType === "hexagon") {
+      const w = width;
+      const h = height;
+      points = [
+        pointFrom<LocalPoint>(w / 2, 0),
+        pointFrom<LocalPoint>(w, h * 0.25),
+        pointFrom<LocalPoint>(w, h * 0.75),
+        pointFrom<LocalPoint>(w / 2, h),
+        pointFrom<LocalPoint>(0, h * 0.75),
+        pointFrom<LocalPoint>(0, h * 0.25),
+        pointFrom<LocalPoint>(w / 2, 0),
+      ];
+    }
+
     scene.mutateElement(
       newElement,
       {
@@ -346,6 +363,7 @@ export const dragNewElement = ({
         height,
         ...textAutoResize,
         ...imageInitialDimension,
+        ...(points && { points }),
       },
       { informMutation, isDragging: false },
     );
