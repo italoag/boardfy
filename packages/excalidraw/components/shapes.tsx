@@ -115,10 +115,7 @@ export const findShapeByKey = (key: string, app: AppClassProperties) => {
   const shape = getToolbarTools(app).find((shape, index) => {
     return (
       (shape.numericKey != null && key === shape.numericKey.toString()) ||
-      (shape.key &&
-        (typeof shape.key === "string"
-          ? shape.key === key
-          : (shape.key as unknown as readonly string[]).includes(key)))
+      (shape.key && shape.key === key)
     );
   });
   return shape?.value || null;
