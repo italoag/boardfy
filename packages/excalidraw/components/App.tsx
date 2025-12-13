@@ -8734,7 +8734,7 @@ class App extends React.Component<AppProps, AppState> {
       roundness: this.getCurrentItemRoundness("rectangle"),
       locked: false,
       frameId: topLayerFrame ? topLayerFrame.id : null,
-      points: [[0, 0], [0, 0]], // Will be resized by dragNewElement
+      points: [pointFrom<LocalPoint>(0, 0), pointFrom<LocalPoint>(0, 0)], // Will be resized by dragNewElement
     });
 
     this.scene.insertElement(element);

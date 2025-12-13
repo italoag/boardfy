@@ -97,6 +97,7 @@ export const AllowedExcalidrawActiveTools: Record<
   text: true,
   rectangle: true,
   diamond: true,
+  hexagon: true,
   ellipse: true,
   line: true,
   image: true,
