@@ -237,7 +237,51 @@ export const recognizeShape = (
        };
     }
 
-    if (vertexCount === 4 || vertexCount === 5) {
+    if (vertexCount === 4) {
+        // Special check for Triangles misclassified as Quads
+        // Check internal angles. A triangle with 4 vertices has one angle ~180 degrees.
+        // We calculate deviation from 180.
+        // points 0..3 are unique.
+        const n = 4;
+        let isTriangle = false;
+        for(let i=0; i<n; i++) {
+            const prev = closedSimplified[i];
+            const curr = closedSimplified[(i+1)%n];
+            const next = closedSimplified[(i+2)%n];
+
+            const v1 = [curr[0] - prev[0], curr[1] - prev[1]];
+            const v2 = [next[0] - curr[0], next[1] - curr[1]];
+            const mag1 = Math.hypot(v1[0], v1[1]);
+            const mag2 = Math.hypot(v2[0], v2[1]);
+
+            if (mag1 === 0 || mag2 === 0) continue;
+
+            const dot = v1[0] * v2[0] + v1[1] * v2[1];
+            // cos(theta). theta is angle between vectors.
+            // If straight line, vectors are same direction -> dot/mag1*mag2 = 1.
+            const cosTheta = dot / (mag1 * mag2);
+
+            // If cosTheta > 0.9 (angle < ~25 degrees), it's basically straight
+            // This vertex is redundant -> Triangle
+            if (cosTheta > 0.9) {
+                isTriangle = true;
+                break;
+            }
+        }
+
+        if (isTriangle) {
+             return {
+                type: "line",
+                points: closedSimplified.map((p) => [p[0] - closedSimplified[0][0], p[1] - closedSimplified[0][1]]) as [number, number][],
+                x: closedSimplified[0][0],
+                y: closedSimplified[0][1],
+             };
+        }
+
+        return checkRectVsDiamond();
+    }
+
+    if (vertexCount === 5) {
         return checkRectVsDiamond();
     }
 

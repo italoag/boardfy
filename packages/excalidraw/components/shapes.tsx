@@ -118,7 +118,7 @@ export const findShapeByKey = (key: string, app: AppClassProperties) => {
       (shape.key &&
         (typeof shape.key === "string"
           ? shape.key === key
-          : (shape.key as readonly string[]).includes(key)))
+          : (shape.key as unknown as readonly string[]).includes(key)))
     );
   });
   return shape?.value || null;
